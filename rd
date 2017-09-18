@@ -5,6 +5,7 @@ set -euo pipefail
 CONFIG_DIR=~/.config/rd
 SWARM_CONFIG_DIR="${CONFIG_DIR}/swarms"
 NODES_CONFIG_DIR="${CONFIG_DIR}/nodes"
+HOSTNAME_REGEXP='^\([[:alnum:]-]*\).'
 
 make_swarm_config_dir() {
   mkdir -p "$SWARM_CONFIG_DIR"
@@ -125,12 +126,38 @@ reset_docker_env() {
 	EOF
 }
 
+setup_ros_node() {
+  local node="$1"
+  local full_hostname host_part
+  local host_part
+
+  full_hostname="$(hostname_for_node "$node")"
+  host_part="$(expr "$full_hostname" : "$HOSTNAME_REGEXP")"
+
+  echo Setting up TLS on rancher host "$full_hostname"
+
+  ssh -T "$node" << CMD
+    set -euo pipefail
+
+    sudo ros config set rancher.docker.tls true
+    sudo ros tls gen --server -H localhost -H "$full_hostname" -H "$host_part"
+    sudo system-docker restart docker
+    sudo ros tls gen
+CMD
+}
+
 add() {
   local swarm="$1"
+  shift
+  local setup_ros="$1"
   shift
   local nodes=("$@")
 
   for node in "${nodes[@]}"; do
+    if [[ "$setup_ros" == "1" ]]; then
+      setup_ros_node "$node"
+    fi
+
     if [ -n "$swarm" ]; then
       echo Adding node "$node" to "$swarm"
     else
@@ -186,13 +213,14 @@ list() {
 }
 
 main() {
-  local opts swarm=""
+  local opts swarm="" setup_ros="0"
 
-  opts=$(getopt -o s: --long swarm: -- "$@")
+  opts=$(getopt -o s: --long swarm: -o r --long setup-ros -- "$@")
   eval set -- "$opts"
 
   while true; do
     case "$1" in
+      -r|--setup-ros) setup_ros=1; shift 1;;
       -s|--swarm) swarm="$2"; shift 2;;
       --) shift; break;;
       *) break;
@@ -205,7 +233,7 @@ main() {
   shift
   case "$command" in
     add)
-      add "$swarm" "$@";;
+      add "$swarm" "$setup_ros" "$@";;
     env)
       env "$swarm" "$@";;
     rm|remove)
@@ -214,7 +242,7 @@ main() {
       list "$@";;
     h|help)
       printf "Available commands:\n\n"
-      printf "add [-s|--swarm <swarm>] <host> [<host> ..]\n"
+      printf "add [-s|--swarm <swarm>] [-r|--setup-ros] <host> [<host> ..]\n"
       printf "\tAdd one or more hosts\n\n"
       printf "env [-s|--swarm <swarm>] [<host>]\n"
       printf "\tGet the environment for a host or any host in a swarm\n\n"

@@ -5,7 +5,9 @@ rd is a tool which allows switching your local Docker client between remote Dock
 ## Prerequisites
 
 * You need to have a remote Docker host [configured with TLS](https://docs.docker.com/engine/security/https/#client-modes) and SSH access.
-* The client certificate bundle (`ca.pem`, `key.pem` and `cert.pem`) needs to be present in the `~/.docker` directory of your SSH user on the remote host. That is the case after [setting up TLS certicates on RancherOS](http://rancher.com/docs/os/configuration/setting-up-docker-tls/#generate-client-certificates).
+* The client certificate bundle (`ca.pem`, `key.pem` and `cert.pem`) needs to be present in the `~/.docker` directory of your SSH user on the remote host. 
+
+For RancherOS hosts, just add the option `-r` (`--setup-ros`) to the `add` command. See below.
 
 ## Install
 
@@ -14,7 +16,7 @@ Just copy the `rd` script to a directory somewhere in your `PATH`.
 ## Quickstart
 
 ```bash
-rd add rancher@dockerhost1
+rd add --setup-ros rancher@dockerhost1
 eval $(rd env dockerhost1)
 # Now operating on remote docker
 docker info
@@ -29,13 +31,16 @@ docker info
 ### Add hosts
 
 ```bash
-rd add rancher@dockerhost1 rancher@dockerhost2 ...
-rd add --swarm my-swarm rancher@swarmnode1 rancher@swarmnode2
+rd add ubuntu@dockerhost1 ubuntu@dockerhost2 ...
+rd add --setup-ros rancher@dockerhost1 rancher@dockerhost2 ...
+rd add --setup-ros --swarm my-swarm rancher@swarmnode1 rancher@swarmnode2
 ```
 
 `rd add` will fetch the TLS certificates from the remote hosts and save them locally for use.
 
 Use the `-s` or `--swarm` flag in order to mark the host(s) as belonging to the named swarm.
+
+With the `-r` or `--setup-ros` option and a RancherOS host, TLS will be automatically configured [according to the RancherOS documentation](http://rancher.com/docs/os/v1.1/en/configuration/setting-up-docker-tls).
 
 ### Setup the docker env
 
