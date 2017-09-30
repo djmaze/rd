@@ -6,6 +6,7 @@ CONFIG_DIR=~/.config/rd
 SWARM_CONFIG_DIR="${CONFIG_DIR}/swarms"
 NODES_CONFIG_DIR="${CONFIG_DIR}/nodes"
 HOSTNAME_REGEXP='^\([[:alnum:]-]*\).'
+DUMMY_SWARM_NAME="_no-swarm"
 
 make_swarm_config_dir() {
   mkdir -p "$SWARM_CONFIG_DIR"
@@ -25,6 +26,10 @@ make_node_config_dir() {
   local node="$1"
   remove_node_config_dir "$node"
   mkdir -p "$(node_config_dir "$node")"
+}
+
+swarms() {
+  ls -1 "$SWARM_CONFIG_DIR"
 }
 
 nodes() {
@@ -49,10 +54,11 @@ add_to_swarm() {
 }
 
 remove_node_from_swarms() {
-  local node="$1"
+  local swarm_name node="$1"
 
   for swarm_config in $(swarms_for_node "$node"); do
-    echo Removing node from swarm \""$(basename "$swarm_config")"\"
+    swarm_name="$(basename "$swarm_config")"
+    [[ "$swarm_name" != "$DUMMY_SWARM_NAME" ]] && echo Removing node from swarm \""$swarm_name)"\"
     sed -i "/.*@$node/d" "$swarm_config"
   done
 }
@@ -82,10 +88,16 @@ hostname_for_node() {
   echo "${node#*@}"
 }
 
+nodes_for_swarm() {
+  local swarm="$1"
+
+  sort "$(swarm_config_file "$swarm")"
+}
+
 get_random_node_for_swarm() {
   local swarm="$1"
 
-  sort -R "$(swarm_config_file "$swarm")" | head -n1
+  echo "$(nodes_for_swarm "$swarm")" | sort -R - | head -n1
 }
 
 check_node_exists() {
@@ -165,7 +177,11 @@ add() {
     fi
 
     add_node "$swarm" "$node"
-    [ -n "$swarm" ] && add_to_swarm "$swarm" "$node"
+    if [ -n "$swarm" ]; then
+      add_to_swarm "$swarm" "$node"
+    else
+      add_to_swarm "$DUMMY_SWARM_NAME" "$node"
+    fi
   done
 }
 
@@ -177,7 +193,7 @@ remove() {
       echo Removing node "$node"
       remove_node "$node"
     else
-      echo Error, node \""${node}"\" unknown! >&2
+      echo Error: node \""${node}"\" unknown! >&2
       exit 1
     fi
   done
@@ -209,7 +225,22 @@ env() {
 }
 
 list() {
-  nodes
+  local nodes_without_swarm="$(nodes_for_swarm "$DUMMY_SWARM_NAME")"
+  for swarm in $(swarms); do
+    if [[ "$swarm" != "$DUMMY_SWARM_NAME" ]]; then
+      echo "swarm: $swarm"
+      for node in $(nodes_for_swarm "$swarm"); do
+        echo -e "  $(hostname_for_node "$node")"
+      done
+    fi
+  done
+
+  if [ -n "$nodes_without_swarm" ]; then
+    echo "nodes without swarm:"
+    for node in $nodes_without_swarm; do
+      echo -e "  $(hostname_for_node "$node")"
+    done
+  fi
 }
 
 main() {
