@@ -4,7 +4,7 @@ rd is a tool which allows switching your local Docker client between remote Dock
 
 ## Prerequisites
 
-* You need to have a remote Docker host [configured with TLS](https://docs.docker.com/engine/security/https/#client-modes) and SSH access.
+* You need to have a remote Docker host [configured with TLS](https://docs.docker.com/engine/security/https/) and SSH access.
 * The client certificate bundle (`ca.pem`, `key.pem` and `cert.pem`) needs to be present in the `~/.docker` directory of your SSH user on the remote host. 
 
 For RancherOS hosts, just add the option `-r` (`--setup-ros`) to the `add` command. See below.
