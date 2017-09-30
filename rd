@@ -215,7 +215,7 @@ list() {
 main() {
   local opts swarm="" setup_ros="0"
 
-  opts=$(getopt -o s: --long swarm: -o r --long setup-ros -- "$@")
+  opts=$(getopt -o s: --long swarm: -o r --long setup-ros -o h --long help -- "$@")
   eval set -- "$opts"
 
   while true; do
@@ -230,7 +230,7 @@ main() {
   [ -n "${DEBUG:-}" ] && [ -n "${swarm}" ] && echo Using swarm "$swarm"
 
   command="${1:-}"
-  shift
+  [ -n "$command" ] && shift
   case "$command" in
     add)
       add "$swarm" "$setup_ros" "$@";;
@@ -240,7 +240,7 @@ main() {
       remove "$@";;
     ls|list)
       list "$@";;
-    h|help)
+    -h|--help)
       printf "Available commands:\n\n"
       printf "add [-s|--swarm <swarm>] [-r|--setup-ros] <host> [<host> ..]\n"
       printf "\tAdd one or more hosts\n\n"
@@ -253,7 +253,7 @@ main() {
       ;;
     *)
       echo "Syntax: rd <COMMAND> [<ARGS..>]"
-      echo Use help for more information.
+      echo Use --help for more information.
       exit 1
   esac
 }
