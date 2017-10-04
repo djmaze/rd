@@ -72,3 +72,27 @@ rd list
 ```
 
 `rd list` lists the names of all known hosts.
+
+## Usage with direnv
+
+[Direnv](https://direnv.net/) is a useful tool which automatically sets environment variables according to the current directory in your shell. You can use it to automatically switch your shell to a specific swarm.
+
+1. Install [direnv](https://direnv.net/)
+
+2. Add this to your `~/.direnvrc`:
+
+    ```bash
+    use_docker() {
+      eval $(rd env $*)
+    }
+    ```
+
+3. In the directory with your swarm's service files, you can now add a new `.envrc`:
+
+        use docker --swarm my-swarm
+
+    Replace `my-swarm` with the name of your swarm.
+
+4. Allow the new config:
+
+        direnv allow
